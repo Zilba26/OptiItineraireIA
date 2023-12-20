@@ -14,7 +14,11 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
+    "@types/adm-zip": "^0.5.5",
+    "@types/archiver": "^6.0.2",
     "@types/leaflet-routing-machine": "^3.2.8",
+    "adm-zip": "^0.5.10",
+    "archiver": "^6.0.1",
     "leaflet": "^1.9.4"
   }
 }
