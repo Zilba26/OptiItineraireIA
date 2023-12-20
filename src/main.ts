@@ -2,6 +2,7 @@ import "./style.css";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { main } from "./prediction";
+import { run } from "./prediction-gpt";
 //import 'leaflet-routing-machine';
 
 // const map = L.map('map').setView([51.505, -0.09], 13);
@@ -25,4 +26,4 @@ import { main } from "./prediction";
 //   ]
 // })
 
-main();
+run();

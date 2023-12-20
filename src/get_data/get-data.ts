@@ -8,7 +8,7 @@ export async function getData() {
   const data: any[] = [];
   Object.entries(contentData).forEach(([timestampKey, value]) => {
     if (Array.isArray(value)) {
-      for(let i = 0; i < value.length; i++) {
+      for (let i = 0; i < value.length; i++) {
         const roadData = value[i].split(";");
         data.push({
           id: roadData[0],
@@ -27,16 +27,34 @@ export async function getData() {
 
 export async function getInputOutputTrainData(): Promise<{ input: any[], output: any[] }> {
   const dataList = await getData();
-  const input: any[] = [];
-  const output: string[] = [];
+  const input: number[][] = [];
+  const output: number[][] = [];
 
   for (const data of dataList) {
-    const { id, speed, time, traffic } = data;
-    const resultObj: any = { speed, time, traffic };
+    const { id, timestamp, speed, time, traffic } = data;
+    const inputObj: number[] = [parseInt(id), new Date(timestamp).getTime()];
+    const outputObj: number[] = [parseInt(speed), parseInt(time), getTrafficCode(traffic)];
 
-    input.push(resultObj);
-    output.push(id);
+    input.push(inputObj);
+    output.push(outputObj);
   }
 
   return { input, output };
+}
+
+function getTrafficCode(traffic: string): number {
+  switch (traffic) {
+    case "Indéterminé":
+      return 0;
+    case "Fluide":
+      return 1;
+    case "Dense":
+      return 2;
+    case "Saturé":
+      return 3;
+    case "Bloqué":
+      return 4;
+    default:
+      throw new Error("Traffic code {" + traffic + "} not found");
+  }
 }
