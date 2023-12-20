@@ -15,6 +15,7 @@ export async function main() {
     .then(() => {
       // Tester le modèle
       testModel(model, testingData);
+      console.log("test model");
     })
     .catch((error) => {
       console.error("Erreur lors de l'entraînement du modèle :", error);
@@ -38,7 +39,6 @@ function splitData(
 const YOUR_INPUT_DIMENSION = 3; // ici 3 car (id, jour, heure)
 
 // Fonction pour créer le modèle
-// Fonction pour créer le modèle
 function createModel(): tf.Sequential {
   const model = tf.sequential();
 
@@ -55,7 +55,7 @@ function createModel(): tf.Sequential {
   model.add(tf.layers.dense({ units: 32, activation: "relu" }));
 
   // Ajouter une couche de sortie
-  const numTrafficCategories = 4; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué')
+  const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué')
   model.add(
     tf.layers.dense({ units: numTrafficCategories, activation: "softmax" })
   );
@@ -66,6 +66,9 @@ function createModel(): tf.Sequential {
     loss: "categoricalCrossentropy",
     metrics: ["accuracy"],
   });
+
+  console.log("Modèle créé");
+  model.summary();
 
   return model;
 }
