@@ -36,7 +36,7 @@ function splitData(
 }
 
 //la dimension de vos données d'entrée
-const YOUR_INPUT_DIMENSION = 3; // ici 3 car (id, jour, heure)
+const YOUR_INPUT_DIMENSION = 4; // ici 3 car (id, jour, heure, minute)
 
 // Fonction pour créer le modèle
 function createModel(): tf.Sequential {
@@ -46,13 +46,10 @@ function createModel(): tf.Sequential {
   model.add(
     tf.layers.dense({
       inputShape: [YOUR_INPUT_DIMENSION],
-      units: 128,
+      units: 4,
       activation: "relu",
     })
   );
-
-  // Ajouter une couche cachée
-  model.add(tf.layers.dense({ units: 64, activation: "relu" }));
 
   // Ajouter une couche de sortie
   const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué', 'Indéterminé')
@@ -85,6 +82,7 @@ async function trainModel(
       parseFloat(item.id),
       new Date(item.timestamp).getDay(), // Jour de la semaine (0-6)
       parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
+      parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0]), // Minute de l'heure
     ];
   });
 
@@ -113,6 +111,7 @@ function testModel(model: tf.Sequential, testingData: any[]): void {
       parseFloat(item.id),
       new Date(item.timestamp).getDay(), // Jour de la semaine (0-6)
       parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
+      parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0]), // Minute de l'heure
     ];
   });
 
@@ -122,16 +121,7 @@ function testModel(model: tf.Sequential, testingData: any[]): void {
   console.log("Étiquettes uniques :");
   console.log(uniqueTrafficLabels);
 
-  const labels: number[][] = testingData.map((item) => {
-    const oneHotLabel: number[] = Array.from(
-      { length: uniqueTrafficLabels.length },
-      (_, index) => (item.traffic === uniqueTrafficLabels[index] ? 1 : 0)
-    );
-    return oneHotLabel;
-  });
-
   const xs: tf.Tensor2D = tf.tensor2d(inputs);
-  const ys: tf.Tensor2D = tf.tensor2d(labels);
 
   const predictions: tf.Tensor = model.predict(xs) as tf.Tensor;
 
