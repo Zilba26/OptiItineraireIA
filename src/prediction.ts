@@ -46,16 +46,16 @@ function createModel(): tf.Sequential {
   model.add(
     tf.layers.dense({
       inputShape: [YOUR_INPUT_DIMENSION],
-      units: 64,
+      units: 128,
       activation: "relu",
     })
   );
 
   // Ajouter une couche cachée
-  model.add(tf.layers.dense({ units: 32, activation: "relu" }));
+  model.add(tf.layers.dense({ units: 64, activation: "relu" }));
 
   // Ajouter une couche de sortie
-  const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué')
+  const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué', 'Indéterminé')
   model.add(
     tf.layers.dense({ units: numTrafficCategories, activation: "softmax" })
   );
@@ -119,6 +119,9 @@ function testModel(model: tf.Sequential, testingData: any[]): void {
   const trafficLabels: string[] = testingData.map((item) => item.traffic);
   const uniqueTrafficLabels: string[] = Array.from(new Set(trafficLabels)); // Obtenir les valeurs uniques
 
+  console.log("Étiquettes uniques :");
+  console.log(uniqueTrafficLabels);
+
   const labels: number[][] = testingData.map((item) => {
     const oneHotLabel: number[] = Array.from(
       { length: uniqueTrafficLabels.length },
@@ -130,16 +133,25 @@ function testModel(model: tf.Sequential, testingData: any[]): void {
   const xs: tf.Tensor2D = tf.tensor2d(inputs);
   const ys: tf.Tensor2D = tf.tensor2d(labels);
 
-  const predictions: tf.Tensor | tf.Tensor[] = model.predict(xs);
+  const predictions: tf.Tensor = model.predict(xs) as tf.Tensor;
 
-  // Pour une seule sortie, vous pouvez accéder à la première sortie du tableau
-  const singlePrediction: tf.Tensor = Array.isArray(predictions)
-    ? predictions[0]
-    : predictions;
+  // Obtenir les indices des valeurs maximales dans chaque tableau de probabilités
+  const predictedIndices: number[] = (
+    tf.argMax(predictions, 1) as tf.Tensor
+  ).arraySync() as number[];
 
-  // Comparer les prédictions avec les étiquettes réelles
-  console.log("Prédictions :");
-  singlePrediction.print();
-  console.log("Étiquettes :");
-  ys.print();
+  // Convertir les indices en noms de classes
+  const predictedTraffic: string[] = predictedIndices.map(
+    (index) => uniqueTrafficLabels[index]
+  );
+
+  // Créer un tableau avec les données pour afficher dans la console
+  const comparisonData = testingData.map((item, i) => ({
+    Actual: item.traffic,
+    Predicted: predictedTraffic[i],
+    Correct: item.traffic === predictedTraffic[i] ? "✅" : "❌",
+  }));
+
+  // Afficher le tableau dans la console
+  console.table(comparisonData);
 }
