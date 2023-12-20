@@ -1,39 +1,25 @@
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
+import { getData } from "./get_data/get-data";
 
-// Charger vos données depuis vos fichiers JSON
-const rawData = require("public/nantes_json/244400404_fluidite-axes-routiers-nantes-metropole.json");
+export async function main() {
+  const formattedData = await getData();
 
-// Formater les données
-const formattedData = formatData(rawData);
+  // Diviser les données en ensembles d'entraînement et de test
+  const { trainingData, testingData } = splitData(formattedData);
 
-// Diviser les données en ensembles d'entraînement et de test
-const { trainingData, testingData } = splitData(formattedData);
+  // Créer le modèle
+  const model = createModel();
 
-// Créer le modèle
-const model = createModel();
+  // Entraîner le modèle
+  trainModel(model, trainingData)
+    .then(() => {
+      // Tester le modèle
+      testModel(model, testingData);
+    })
+    .catch(error => {
+      console.error("Erreur lors de l'entraînement du modèle :", error);
+    });
 
-// Entraîner le modèle
-trainModel(model, trainingData)
-  .then(() => {
-    // Tester le modèle
-    testModel(model, testingData);
-  })
-  .catch(error => {
-    console.error("Erreur lors de l'entraînement du modèle :", error);
-  });
-
-// Fonction pour formater les données
-function formatData(rawData: any): any[] {
-  return rawData.features.map((entry: any) => ({
-    chaId: entry.properties.cha_id,
-    chaLib: entry.properties.cha_lib,
-    horodatage: new Date(entry.properties.mf1_hd),
-    vitesse: entry.properties.mf1_vit,
-    tempsParcours: entry.properties.tc1_temps,
-    etatTrafic: entry.properties.etat_trafic,
-    geometrie: entry.geometry,
-    geoPoint2D: entry.properties.geo_point_2d,
-  }));
 }
 
 // Fonction pour diviser les données en ensembles d'entraînement et de test

@@ -1,6 +1,6 @@
 import { unzip } from './archiver';
 
-async function getData() {
+export async function getData() {
   //const content = await fs.readFile("data.json", 'utf-8');
   //const contentData = JSON.parse(content) as any;
   const contentData = unzip();
@@ -24,7 +24,3 @@ async function getData() {
   });
   return data;
 }
-
-getData().then(data => {
-  console.log(data);
-});
