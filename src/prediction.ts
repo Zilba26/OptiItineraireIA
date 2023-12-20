@@ -16,14 +16,16 @@ export async function main() {
       // Tester le modèle
       testModel(model, testingData);
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("Erreur lors de l'entraînement du modèle :", error);
     });
-
 }
 
 // Fonction pour diviser les données en ensembles d'entraînement et de test
-function splitData(data: any[], trainRatio: number = 0.8): { trainingData: any[]; testingData: any[] } {
+function splitData(
+  data: any[],
+  trainRatio: number = 0.8
+): { trainingData: any[]; testingData: any[] } {
   const shuffledData = [...data].sort(() => Math.random() - 0.5);
   const splitIndex = Math.floor(shuffledData.length * trainRatio);
   const trainingData = shuffledData.slice(0, splitIndex);
@@ -32,47 +34,109 @@ function splitData(data: any[], trainRatio: number = 0.8): { trainingData: any[]
   return { trainingData, testingData };
 }
 
-// Remplacez YOUR_INPUT_DIMENSION par la dimension de vos données d'entrée
-const YOUR_INPUT_DIMENSION = 5; // À ajuster selon la structure de vos données
-
-// Remplacez NUM_CLASSES par le nombre de classes pour la classification
-const NUM_CLASSES = 3; // À ajuster selon le nombre de classes dans vos données
+//la dimension de vos données d'entrée
+const YOUR_INPUT_DIMENSION = 3; // ici 3 car (id, jour, heure)
 
 // Fonction pour créer le modèle
-function createModel(): tf.LayersModel {
+// Fonction pour créer le modèle
+function createModel(): tf.Sequential {
   const model = tf.sequential();
 
-  model.add(tf.layers.dense({ inputShape: [YOUR_INPUT_DIMENSION], units: 64, activation: 'relu' }));
-  model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
-  model.add(tf.layers.dense({ units: NUM_CLASSES, activation: 'softmax' }));
+  // Ajouter une couche d'entrée
+  model.add(
+    tf.layers.dense({
+      inputShape: [YOUR_INPUT_DIMENSION],
+      units: 64,
+      activation: "relu",
+    })
+  );
 
+  // Ajouter une couche cachée
+  model.add(tf.layers.dense({ units: 32, activation: "relu" }));
+
+  // Ajouter une couche de sortie
+  const numTrafficCategories = 4; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué')
+  model.add(
+    tf.layers.dense({ units: numTrafficCategories, activation: "softmax" })
+  );
+
+  // Compiler le modèle
   model.compile({
-    optimizer: tf.train.adam(),
-    loss: 'categoricalCrossentropy',
-    metrics: ['accuracy'],
+    optimizer: "adam",
+    loss: "categoricalCrossentropy",
+    metrics: ["accuracy"],
   });
 
   return model;
 }
 
 // Fonction pour entraîner le modèle
-async function trainModel(model: tf.LayersModel, trainingData: any[]): Promise<void> {
-  const inputs = tf.tensor2d(trainingData.map(entry => [/* convertir les données d'entrée */]));
-  const labels = tf.oneHot(trainingData.map(entry => /* convertir les étiquettes en indices */), NUM_CLASSES);
-
-  await model.fit(inputs, labels, {
-    epochs: 10,
-    shuffle: true,
-    validationSplit: 0.2,
+async function trainModel(
+  model: tf.Sequential,
+  trainingData: any[],
+  epochs: number = 50
+): Promise<tf.History> {
+  const inputs: number[][] = trainingData.map((item) => {
+    // Convertir les données en tenseurs d'entrée
+    return [
+      parseFloat(item.id),
+      new Date(item.timestamp).getDay(), // Jour de la semaine (0-6)
+      parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
+    ];
   });
+
+  const trafficLabels: string[] = trainingData.map((item) => item.traffic);
+  const uniqueTrafficLabels: string[] = Array.from(new Set(trafficLabels)); // Obtenir les valeurs uniques
+
+  const labels: number[][] = trainingData.map((item) => {
+    const oneHotLabel: number[] = Array.from(
+      { length: uniqueTrafficLabels.length },
+      (_, index) => (item.traffic === uniqueTrafficLabels[index] ? 1 : 0)
+    );
+    return oneHotLabel;
+  });
+
+  const xs: tf.Tensor2D = tf.tensor2d(inputs);
+  const ys: tf.Tensor2D = tf.tensor2d(labels);
+
+  return model.fit(xs, ys, { epochs });
 }
 
 // Fonction pour tester le modèle
-function testModel(model: tf.LayersModel, testingData: any[]): void {
-  const inputs = tf.tensor2d(testingData.map(entry => [/* convertir les données d'entrée */]));
-  const labels = tf.oneHot(testingData.map(entry => /* convertir les étiquettes en indices */), NUM_CLASSES);
+function testModel(model: tf.Sequential, testingData: any[]): void {
+  const inputs: number[][] = testingData.map((item) => {
+    // Convertir les données en tenseurs d'entrée
+    return [
+      parseFloat(item.id),
+      new Date(item.timestamp).getDay(), // Jour de la semaine (0-6)
+      parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
+    ];
+  });
 
-  const result = model.evaluate(inputs, labels);
-  console.log('Loss:', result[0].dataSync()[0]);
-  console.log('Accuracy:', result[1].dataSync()[0]);
+  const trafficLabels: string[] = testingData.map((item) => item.traffic);
+  const uniqueTrafficLabels: string[] = Array.from(new Set(trafficLabels)); // Obtenir les valeurs uniques
+
+  const labels: number[][] = testingData.map((item) => {
+    const oneHotLabel: number[] = Array.from(
+      { length: uniqueTrafficLabels.length },
+      (_, index) => (item.traffic === uniqueTrafficLabels[index] ? 1 : 0)
+    );
+    return oneHotLabel;
+  });
+
+  const xs: tf.Tensor2D = tf.tensor2d(inputs);
+  const ys: tf.Tensor2D = tf.tensor2d(labels);
+
+  const predictions: tf.Tensor | tf.Tensor[] = model.predict(xs);
+
+  // Pour une seule sortie, vous pouvez accéder à la première sortie du tableau
+  const singlePrediction: tf.Tensor = Array.isArray(predictions)
+    ? predictions[0]
+    : predictions;
+
+  // Comparer les prédictions avec les étiquettes réelles
+  console.log("Prédictions :");
+  singlePrediction.print();
+  console.log("Étiquettes :");
+  ys.print();
 }
