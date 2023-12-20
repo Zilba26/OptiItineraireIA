@@ -2,24 +2,68 @@ import * as tf from "@tensorflow/tfjs";
 import { getData } from "./get_data/get-data";
 
 export async function main() {
-  const formattedData = await getData();
+  // Chargement des données
+  console.log("Chargement des données...");
+  const originalData = await getData();
+
+  // Répliquer les données en ajoutant une semaine plusieurs fois
+  const replicatedData = replicateDataWithTimeShift(originalData, 10);
 
   // Diviser les données en ensembles d'entraînement et de test
-  const { trainingData, testingData } = splitData(formattedData);
+  console.log("Division des données...");
+  const { trainingData, testingData } = splitData(replicatedData);
 
   // Créer le modèle
+  console.log("Création du modèle...");
   const model = createModel();
 
   // Entraîner le modèle
+  console.log("Entraînement du modèle...");
   trainModel(model, trainingData)
     .then(() => {
       // Tester le modèle
+      console.log("Test du modèle...");
       testModel(model, testingData);
-      console.log("test model");
+      console.log("Test du modèle terminé");
     })
     .catch((error) => {
       console.error("Erreur lors de l'entraînement du modèle :", error);
     });
+}
+
+// Fonction pour répliquer les données en ajoutant une semaine plusieurs fois
+function replicateDataWithTimeShift(
+  originalData: any[],
+  numberOfWeeks: number
+) {
+  const replicatedData: {
+    id: any;
+    timestamp: string; // Convertir en format ISO
+    traffic: any;
+  }[] = [];
+
+  // Parcourir les données existantes
+  originalData.forEach((dataPoint) => {
+    // Récupérer le timestamp d'origine
+    const originalTimestamp = new Date(dataPoint.timestamp);
+
+    // Répliquer les données en ajoutant une semaine plusieurs fois
+    for (let i = 0; i < numberOfWeeks; i++) {
+      // Calculer le nouveau timestamp en ajoutant le nombre de millisecondes pour une semaine
+      const newTimestamp = new Date(
+        originalTimestamp.getTime() + i * 7 * 24 * 60 * 60 * 1000
+      );
+
+      // Ajouter la nouvelle donnée répliquée
+      replicatedData.push({
+        id: dataPoint.id,
+        timestamp: newTimestamp.toISOString(), // Convertir en format ISO
+        traffic: dataPoint.traffic,
+      });
+    }
+  });
+
+  return replicatedData;
 }
 
 // Fonction pour diviser les données en ensembles d'entraînement et de test
@@ -36,7 +80,8 @@ function splitData(
 }
 
 //la dimension de vos données d'entrée
-const YOUR_INPUT_DIMENSION = 4; // ici 3 car (id, jour, heure, minute)
+const YOUR_INPUT_DIMENSION = 4; // ici 4 car (id, jour, heure, minute)
+const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué', 'Indéterminé')
 
 // Fonction pour créer le modèle
 function createModel(): tf.Sequential {
@@ -46,13 +91,15 @@ function createModel(): tf.Sequential {
   model.add(
     tf.layers.dense({
       inputShape: [YOUR_INPUT_DIMENSION],
-      units: 4,
+      units: 64,
       activation: "relu",
     })
   );
 
+  // Ajouter une couche cachée
+  model.add(tf.layers.dense({ units: 32, activation: "relu" }));
+
   // Ajouter une couche de sortie
-  const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué', 'Indéterminé')
   model.add(
     tf.layers.dense({ units: numTrafficCategories, activation: "softmax" })
   );
@@ -76,6 +123,7 @@ async function trainModel(
   trainingData: any[],
   epochs: number = 50
 ): Promise<tf.History> {
+  // Convertir les données d'entraînement en tenseurs
   const inputs: number[][] = trainingData.map((item) => {
     // Convertir les données en tenseurs d'entrée
     return [
@@ -86,7 +134,10 @@ async function trainModel(
     ];
   });
 
+  // Extraire les étiquettes de trafic
   const trafficLabels: string[] = trainingData.map((item) => item.traffic);
+
+  // Encoder les étiquettes en one-hot
   const uniqueTrafficLabels: string[] = Array.from(new Set(trafficLabels)); // Obtenir les valeurs uniques
 
   const labels: number[][] = trainingData.map((item) => {
@@ -97,51 +148,115 @@ async function trainModel(
     return oneHotLabel;
   });
 
+  // Convertir les tableaux d'entrée et d'étiquettes en tenseurs TensorFlow
   const xs: tf.Tensor2D = tf.tensor2d(inputs);
   const ys: tf.Tensor2D = tf.tensor2d(labels);
 
+  // Entraîner le modèle avec les tenseurs d'entrée et d'étiquettes
   return model.fit(xs, ys, { epochs });
 }
 
 // Fonction pour tester le modèle
-function testModel(model: tf.Sequential, testingData: any[]): void {
+async function testModel(
+  model: tf.Sequential,
+  testingData: any[]
+): Promise<void> {
+  // Convertir les données de test en tenseurs
   const inputs: number[][] = testingData.map((item) => {
-    // Convertir les données en tenseurs d'entrée
     return [
       parseFloat(item.id),
-      new Date(item.timestamp).getDay(), // Jour de la semaine (0-6)
-      parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
-      parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0]), // Minute de l'heure
+      new Date(item.timestamp).getDay(),
+      parseFloat(item.timestamp.split("T")[1].split(":")[0]),
+      parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0]),
     ];
   });
 
+  // Extraire les étiquettes de trafic
   const trafficLabels: string[] = testingData.map((item) => item.traffic);
+
+  // Encoder les étiquettes en one-hot
   const uniqueTrafficLabels: string[] = Array.from(new Set(trafficLabels)); // Obtenir les valeurs uniques
 
-  console.log("Étiquettes uniques :");
-  console.log(uniqueTrafficLabels);
+  const labels: number[][] = testingData.map((item) => {
+    const oneHotLabel: number[] = Array.from(
+      { length: uniqueTrafficLabels.length },
+      (_, index) => (item.traffic === uniqueTrafficLabels[index] ? 1 : 0)
+    );
+    return oneHotLabel;
+  });
 
+  // Convertir les tableaux d'entrée et d'étiquettes en tenseurs TensorFlow
   const xs: tf.Tensor2D = tf.tensor2d(inputs);
+  const ys: tf.Tensor2D = tf.tensor2d(labels);
 
+  // Obtenir les prédictions du modèle
   const predictions: tf.Tensor = model.predict(xs) as tf.Tensor;
 
-  // Obtenir les indices des valeurs maximales dans chaque tableau de probabilités
-  const predictedIndices: number[] = (
-    tf.argMax(predictions, 1) as tf.Tensor
-  ).arraySync() as number[];
+  // Comparer les prédictions avec les étiquettes réelles
+  const yTrue: tf.Tensor = tf.argMax(ys, 1);
+  const yPred: tf.Tensor = tf.argMax(predictions, 1);
 
-  // Convertir les indices en noms de classes
-  const predictedTraffic: string[] = predictedIndices.map(
-    (index) => uniqueTrafficLabels[index]
-  );
+  // Afficher des statistiques sur les réussites et les échecs
+  const correctPredictions: tf.Tensor = tf.equal(yTrue, yPred);
+  const numCorrect: number = tf
+    .sum(tf.cast(correctPredictions, "int32"))
+    .arraySync() as number;
+  const accuracy: number = numCorrect / testingData.length;
 
-  // Créer un tableau avec les données pour afficher dans la console
-  const comparisonData = testingData.map((item, i) => ({
-    Actual: item.traffic,
-    Predicted: predictedTraffic[i],
-    Correct: item.traffic === predictedTraffic[i] ? "✅" : "❌",
-  }));
+  // Afficher les états réels du trafic dans les statistiques
+  const trafficStats: { [key: string]: number } = {};
+  trafficLabels.forEach((label) => {
+    trafficStats[label] = (trafficStats[label] || 0) + 1;
+  });
 
-  // Afficher le tableau dans la console
-  console.table(comparisonData);
+  // Afficher les états prédits du trafic dans les statistiques
+  const predictedTrafficStats: { [key: string]: number } = {};
+  const predictedLabelsArray: number[] = yPred.arraySync() as number[];
+  predictedLabelsArray.forEach((labelIndex) => {
+    const predictedLabel = uniqueTrafficLabels[labelIndex];
+    predictedTrafficStats[predictedLabel] =
+      (predictedTrafficStats[predictedLabel] || 0) + 1;
+  });
+
+  console.log("Statistiques du modèle :");
+  console.log("Nombre de prédictions correctes :", numCorrect);
+  console.log("Précision du modèle :", accuracy);
+  console.log("États réels du trafic :", trafficStats);
+  console.log("États prédits du trafic :", predictedTrafficStats);
+}
+
+// Fonction pour faire une prédiction pour une route
+async function predictForRoute(
+  model: tf.Sequential,
+  routeData: any
+): Promise<string> {
+  // Convertir les données de la route en tenseur
+  const input: number[] = [
+    parseFloat(routeData.id),
+    new Date(routeData.timestamp).getDay(),
+    parseFloat(routeData.timestamp.split("T")[1].split(":")[0]),
+    parseFloat(routeData.timestamp.split("T")[1].split(":")[1].split(":")[0]),
+  ];
+
+  const xs: tf.Tensor2D = tf.tensor2d([input]);
+
+  // Faire la prédiction avec le modèle
+  const predictions: tf.Tensor = model.predict(xs) as tf.Tensor;
+
+  // Obtenir l'indice de la catégorie prédite
+  const predictedCategoryIndex: number = (
+    await tf.argMax(predictions, 1).data()
+  )[0];
+
+  // Mapper l'indice prédit à la catégorie de trafic correspondante
+  const trafficCategories = [
+    "Fluide",
+    "Dense",
+    "Saturé",
+    "Bloqué",
+    "Indéterminé",
+  ];
+  const predictedCategory: string = trafficCategories[predictedCategoryIndex];
+
+  return predictedCategory;
 }
