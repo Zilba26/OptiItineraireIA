@@ -3,7 +3,7 @@ import { unzip } from './archiver';
 export async function getData() {
   //const content = await fs.readFile("data.json", 'utf-8');
   //const contentData = JSON.parse(content) as any;
-  const contentData = unzip();
+  const contentData = await unzip();
 
   const data: any[] = [];
   Object.entries(contentData).forEach(([timestampKey, value]) => {
@@ -23,4 +23,20 @@ export async function getData() {
     }
   });
   return data;
+}
+
+export async function getInputOutputTrainData(): Promise<{ input: any[], output: any[] }> {
+  const dataList = await getData();
+  const input: any[] = [];
+  const output: string[] = [];
+
+  for (const data of dataList) {
+    const { id, speed, time, traffic } = data;
+    const resultObj: any = { speed, time, traffic };
+
+    input.push(resultObj);
+    output.push(id);
+  }
+
+  return { input, output };
 }
