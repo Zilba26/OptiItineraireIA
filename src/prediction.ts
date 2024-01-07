@@ -243,8 +243,10 @@ async function predictForRoute(
   const input: number[] = [
     parseFloat(routeData.id),
     new Date(routeData.timestamp).getDay(),
-    parseFloat(routeData.timestamp.split("T")[1].split(":")[0]),
-    parseFloat(routeData.timestamp.split("T")[1].split(":")[1].split(":")[0]),
+    getHourMinute(
+      parseFloat(routeData.timestamp.split("T")[1].split(":")[0]),
+      parseFloat(routeData.timestamp.split("T")[1].split(":")[1].split(":")[0])
+    ),
   ];
 
   const xs: tf.Tensor2D = tf.tensor2d([input]);
