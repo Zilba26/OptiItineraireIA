@@ -7,7 +7,7 @@ export async function main() {
   const originalData = await getData();
 
   // Répliquer les données en ajoutant une semaine plusieurs fois
-  const replicatedData = replicateDataWithTimeShift(originalData, 10);
+  const replicatedData = replicateDataWithTimeShift(originalData, 3);
 
   // Diviser les données en ensembles d'entraînement et de test
   console.log("Division des données...");
@@ -80,7 +80,7 @@ function splitData(
 }
 
 //la dimension de vos données d'entrée
-const YOUR_INPUT_DIMENSION = 4; // ici 4 car (id, jour, heure, minute)
+const YOUR_INPUT_DIMENSION = 3; // ici 4 car (id, jour, heureMinute)
 const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué', 'Indéterminé')
 
 // Fonction pour créer le modèle
@@ -117,6 +117,11 @@ function createModel(): tf.Sequential {
   return model;
 }
 
+//fonction qui prend en paramètre heure et minute et qui retourne une heure à virgule
+function getHourMinute(hour: number, minute: number): number {
+  return hour + minute / 60;
+}
+
 // Fonction pour entraîner le modèle
 async function trainModel(
   model: tf.Sequential,
@@ -129,8 +134,10 @@ async function trainModel(
     return [
       parseFloat(item.id),
       new Date(item.timestamp).getDay(), // Jour de la semaine (0-6)
-      parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
-      parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0]), // Minute de l'heure
+      getHourMinute(
+        parseFloat(item.timestamp.split("T")[1].split(":")[0]), // Heure du jour
+        parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0])
+      ), // Minute de l'heure
     ];
   });
 
@@ -166,8 +173,10 @@ async function testModel(
     return [
       parseFloat(item.id),
       new Date(item.timestamp).getDay(),
-      parseFloat(item.timestamp.split("T")[1].split(":")[0]),
-      parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0]),
+      getHourMinute(
+        parseFloat(item.timestamp.split("T")[1].split(":")[0]),
+        parseFloat(item.timestamp.split("T")[1].split(":")[1].split(":")[0])
+      ),
     ];
   });
 
