@@ -7,7 +7,7 @@ export async function main() {
   const originalData = await getData();
 
   // Répliquer les données en ajoutant une semaine plusieurs fois
-  const replicatedData = replicateDataWithTimeShift(originalData, 3);
+  const replicatedData = replicateDataWithTimeShift(originalData, 1);
 
   // Diviser les données en ensembles d'entraînement et de test
   console.log("Division des données...");
@@ -19,16 +19,15 @@ export async function main() {
 
   // Entraîner le modèle
   console.log("Entraînement du modèle...");
-  trainModel(model, trainingData)
-    .then(() => {
-      // Tester le modèle
-      console.log("Test du modèle...");
-      testModel(model, testingData);
-      console.log("Test du modèle terminé");
-    })
-    .catch((error) => {
-      console.error("Erreur lors de l'entraînement du modèle :", error);
-    });
+  try {
+    await trainModel(model, trainingData);
+    console.log("Test du modèle...");
+    await testModel(model, testingData);
+    console.log("Test du modèle terminé");    return model;
+  } catch (error) {
+    console.error("Erreur lors de l'entraînement du modèle :", error);
+    return null;
+  }
 }
 
 // Fonction pour répliquer les données en ajoutant une semaine plusieurs fois
@@ -235,9 +234,9 @@ async function testModel(
 }
 
 // Fonction pour faire une prédiction pour une route
-async function predictForRoute(
+export async function predictForRoute(
   model: tf.Sequential,
-  routeData: any
+  routeData: {"id": string, "timestamp": string}
 ): Promise<string> {
   // Convertir les données de la route en tenseur
   const input: number[] = [

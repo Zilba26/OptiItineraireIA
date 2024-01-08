@@ -1,7 +1,7 @@
 import "./style.css";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { main } from "./prediction";
+import { main, predictForRoute } from "./prediction";
 import "leaflet-routing-machine";
 
 const map = L.map("map");
@@ -109,7 +109,7 @@ const roadList = [
 
 
 roadList.forEach(road => {
-  L.polyline(road.coordinates.map(coordinate => L.latLng(coordinate[1], coordinate[0])), { color: road.color, opacity: 1, weight: 5 }).addTo(map);
+  // L.polyline(road.coordinates.map(coordinate => L.latLng(coordinate[1], coordinate[0])), { color: road.color, opacity: 1, weight: 5 }).addTo(map);
   // L.Routing.control({
   //   waypoints: road.coordinates.map(coordinate => L.latLng(coordinate[1], coordinate[0])),
   //   lineOptions: {
@@ -122,9 +122,29 @@ roadList.forEach(road => {
   // }).addTo(map);
 });
 
-map.setView([47.21818239970725, -1.5520947541977976], 13);
+map.setView([47.21818239970725, -1.5520947541977976], 12);
 
-main();
+main().then((model: any) => {
+  console.log("model: " + model);
+  fetch("nantes_json/244400404_fluidite-axes-routiers-nantes-metropole.json").then(response => response.json()).then((data: any[]) => {
+    data.forEach((dataPoint) => {
+      const id = dataPoint.fields.cha_id;
+      const coordinates = dataPoint.fields.geo_shape.coordinates;
+      // console.log("data id: " + id + " with name " + dataPoint.fields.cha_lib);
+      const roadData = {
+        "id": id,
+        "timestamp": convertDateToTimestamp(new Date(Date.now())),
+      }
+      predictForRoute(model, roadData).then((traffic: any) => {
+        console.log("traffic: " + traffic);
+        L.polyline(
+          coordinates.map((coordinate: any) => L.latLng(coordinate[1], coordinate[0])), 
+          { color: getColorFromStringTraffic(traffic), opacity: 1, weight: 3 }
+        ).addTo(map);
+      });
+    });
+  });
+});
 
 window.addEventListener("unhandledrejection", (event) => {
   console.error("Unhandled Promise Rejection:", event.reason);
@@ -133,3 +153,34 @@ window.addEventListener("unhandledrejection", (event) => {
 window.addEventListener("error", (event) => {
   console.error("Error:", event.error);
 });
+
+
+function convertDateToTimestamp(date: Date): string {
+
+  // Obtenir les composants de la date
+  var year = date.getFullYear();
+  var month = ('0' + (date.getMonth() + 1)).slice(-2); // Les mois commencent à 0
+  var day = ('0' + date.getDate()).slice(-2);
+  var hours = ('0' + date.getHours()).slice(-2);
+  var minutes = ('0' + date.getMinutes()).slice(-2);
+  var seconds = ('0' + date.getSeconds()).slice(-2);
+  var timezoneOffset = ('0' + (date.getTimezoneOffset() / 60)).slice(-2);
+
+  // Construire la chaîne de date au format souhaité
+  var formattedDate = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes + ':' + seconds + '+' + timezoneOffset + ':00';
+  return formattedDate;
+}
+
+function getColorFromStringTraffic(traffic: string): string {
+  switch (traffic.toUpperCase()) {
+    case "FLUIDE":
+      return "green";
+    case "DENSE":
+      return "orange";
+    case "SATURÉ":
+      return "red";
+    default:
+      console.error("Traffic not recognized: " + traffic);
+      return "black";
+  }
+}
