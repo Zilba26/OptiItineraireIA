@@ -56,6 +56,7 @@ function isLoading(): boolean {
 }
 
 function setData(date: Date) {
+  clearMap();
   fetch("nantes_json/244400404_fluidite-axes-routiers-nantes-metropole.json").then(response => response.json()).then((data: any[]) => {
     data.forEach((dataPoint) => {
       const id = dataPoint.fields.cha_id;
@@ -116,3 +117,17 @@ setInterval(() => {
     }
   }
 }, 500);
+
+function clearMap() {
+  const m = map as any;
+  for(let i in m._layers) {
+      if(m._layers[i]._path != undefined) {
+          try {
+              m.removeLayer(m._layers[i]);
+          }
+          catch(e) {
+              console.log("problem with " + e + m._layers[i]);
+          }
+      }
+  }
+}
