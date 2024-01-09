@@ -105,3 +105,14 @@ function getColorFromStringTraffic(traffic: string): string {
       return "black";
   }
 }
+
+setInterval(() => {
+  if (isLoading()) {
+    const loader = document.getElementById("loader")!;
+    if (loader.innerHTML.slice(-3) == "...") {
+      loader.innerHTML = loader.innerHTML.slice(0, -3);
+    } else {
+      loader.innerHTML += ".";
+    }
+  }
+}, 500);
