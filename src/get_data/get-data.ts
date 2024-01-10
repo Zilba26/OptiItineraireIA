@@ -10,15 +10,17 @@ export async function getData() {
     if (Array.isArray(value)) {
       for(let i = 0; i < value.length; i++) {
         const roadData = value[i].split(";");
-        data.push({
-          id: roadData[0],
-          name: roadData[1],
-          timestamp: timestampKey,
-          speed: roadData[2],
-          time: roadData[3],
-          traffic: roadData[4],
-          coordinates: roadData[5]
-        });
+        if (!roadData[4].startsWith("Ind")) {
+          data.push({
+            id: roadData[0],
+            name: roadData[1],
+            timestamp: timestampKey,
+            speed: roadData[2],
+            time: roadData[3],
+            traffic: roadData[4],
+            coordinates: roadData[5]
+          });
+        }
       }
     }
   });
