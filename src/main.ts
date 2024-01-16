@@ -68,10 +68,18 @@ function setData(date: Date) {
       }
       predictForRoute(model, roadData).then((traffic: any) => {
         console.log("traffic: " + traffic);
-        L.polyline(
-          coordinates.map((coordinate: any) => L.latLng(coordinate[1], coordinate[0])), 
-          { color: getColorFromStringTraffic(traffic), opacity: 1, weight: 3 }
-        ).addTo(map);
+        if (roadData.id == 221) {
+          console.log("PREDICTIONS : " + traffic);
+          L.polyline(
+            coordinates.map((coordinate: any) => L.latLng(coordinate[1], coordinate[0])), 
+            { color: "purple", opacity: 1, weight: 5 }
+          ).addTo(map);
+        } else {
+          L.polyline(
+            coordinates.map((coordinate: any) => L.latLng(coordinate[1], coordinate[0])), 
+            { color: getColorFromStringTraffic(traffic), opacity: 0.6, weight: 2 }
+          ).addTo(map);
+        }
       });
     });
   });

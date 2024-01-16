@@ -1,17 +1,20 @@
 import * as tf from "@tensorflow/tfjs";
 import { getData } from "./get_data/get-data";
+import { downLoadAllFiles } from "./firebase";
 
 export async function main() {
   // Chargement des données
   console.log("Chargement des données...");
-  const originalData = await getData();
+  //const firebaseData = await downLoadAllFiles();
+  const originalData = await getData("221");
+  console.log("Données chargées (Length : " + originalData.length + ")");
 
   // Répliquer les données en ajoutant une semaine plusieurs fois
-  const replicatedData = replicateDataWithTimeShift(originalData, 1);
+  //const replicatedData = replicateDataWithTimeShift(originalData, 1);
 
   // Diviser les données en ensembles d'entraînement et de test
   console.log("Division des données...");
-  const { trainingData, testingData } = splitData(replicatedData);
+  const { trainingData, testingData } = splitData(originalData);
 
   // Créer le modèle
   console.log("Création du modèle...");
@@ -80,7 +83,7 @@ function splitData(
 
 //la dimension de vos données d'entrée
 const YOUR_INPUT_DIMENSION = 3; // ici 4 car (id, jour, heureMinute)
-const numTrafficCategories = 5; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué', 'Indéterminé')
+const numTrafficCategories = 4; // Nombre de catégories de trafic ('Fluide', 'Dense', 'Saturé', 'Bloqué')
 
 // Fonction pour créer le modèle
 function createModel(): tf.Sequential {

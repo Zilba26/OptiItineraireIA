@@ -3,13 +3,19 @@ import JSZip from "jszip";
 const zipName = 'archive.zip';
 const jsonName = 'data.json';
 
-export async function unzip() {
+export async function unzip(data?: ArrayBuffer | string) {
   // Utilisez fetch pour récupérer le fichier zip depuis le dossier public
-  const response = await fetch(zipName);
-  const zipBuffer = await response.arrayBuffer();
+  let zipBuffer: ArrayBuffer;
+  if (data instanceof ArrayBuffer) {
+    zipBuffer = data;
+  } else {
+    console.log("Load zip file from public folder " + data?.toString() ?? "");
+    const response = await fetch(data?.toString() ?? "");
+    zipBuffer = await response.arrayBuffer();
+  }
 
   // Utilisez JSZip pour décompresser le fichier zip
-  const zip = await JSZip.loadAsync(zipBuffer);
+  const zip = await JSZip.loadAsync(zipBuffer!);
 
   // Obtenez les entrées du zip
   const zipEntries = Object.values(zip.files);
