@@ -4,7 +4,7 @@ Cette intelligence artificielle vous permet de prédire le trafic routier sur la
 
 ## Getting started
 
-Prérequis : Installer NodeJS et NPM
+Prérequis : Installer [NodeJS](https://nodejs.org/en/download/current), [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), et [git](https://www.git-scm.com/downloads)
 
 - Cloner le projet `git clone https://github.com/Zilba26/OptiItineraireIA.git`
 - Installer les dépendances `npm install`
