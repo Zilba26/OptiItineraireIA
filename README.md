@@ -1,4 +1,4 @@
-### OptiItineraireAI
+# OptiItineraireAI
 
 Cette intelligence artificielle vous permet de prédire le trafic routier sur la ville de Nantes
 
