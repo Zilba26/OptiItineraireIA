@@ -1,8 +1,8 @@
-# OptiItineraireAI
+# OptiItineraireIA
 
 Cette intelligence artificielle vous permet de prédire le trafic routier sur la ville de Nantes
 
-## Getting started
+## Pour commencer
 
 Prérequis : Installer [Node.js](https://nodejs.org/en/download/current), [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), et [git](https://www.git-scm.com/downloads)
 
